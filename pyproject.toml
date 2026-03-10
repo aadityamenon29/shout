@@ -1,0 +1,20 @@
+[project]
+name = "shout"
+version = "0.1.0"
+description = "macOS push-to-talk speech-to-text app"
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+authors = [
+    { name = "Aaditya Menon" },
+]
+dependencies = [
+    "pywhispercpp>=1.2.0",
+    "sounddevice>=0.5.1",
+    "rumps>=0.4.0",
+    "pynput>=1.7.7",
+    "numpy>=1.26.0",
+]
+
+[project.urls]
+Repository = "https://github.com/aadityamenon29/shout"
