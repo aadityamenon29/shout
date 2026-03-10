@@ -34,6 +34,9 @@ class ShoutApp(rumps.App):
         self._start_hotkey_listener()
         # Preload Whisper model in background so first transcription is fast
         threading.Thread(target=get_model, daemon=True).start()
+        # Check permissions once the app event loop is running
+        self._setup_timer = rumps.Timer(self._check_permissions, 1)
+        self._setup_timer.start()
 
     def _start_hotkey_listener(self):
         self._listener = Listener(
@@ -91,41 +94,40 @@ class ShoutApp(rumps.App):
         self.title = "🎤"
         self._status_item.title = "Status: Idle"
 
+    def _check_permissions(self, _):
+        """Walk the user through each missing permission one at a time."""
+        self._setup_timer.stop()
+
+        from permissions import get_missing_permissions, open_settings
+
+        missing = get_missing_permissions()
+        if not missing:
+            return
+
+        total = len(missing)
+        for i, perm in enumerate(missing, 1):
+            response = rumps.alert(
+                title=f"Shout Setup ({i}/{total}): {perm['name']}",
+                message=f"{perm['why']}\n\n{perm['how']}",
+                ok="Open Settings",
+                cancel="Skip",
+            )
+            if response == 1:  # OK
+                open_settings(perm["name"])
+                rumps.alert(
+                    title=f"{perm['name']}",
+                    message=(
+                        f"Once you've enabled {perm['name']} access, click OK to continue.\n\n"
+                        "Note: you may need to restart Shout for changes to take effect."
+                    ),
+                    ok="OK",
+                )
+
     def _quit(self, _):
         if self._listener:
             self._listener.stop()
         rumps.quit_application()
 
 
-def _check_permissions_gui():
-    """Walk the user through each missing permission one at a time."""
-    from permissions import get_missing_permissions, open_settings
-
-    missing = get_missing_permissions()
-    if not missing:
-        return
-
-    total = len(missing)
-    for i, perm in enumerate(missing, 1):
-        response = rumps.alert(
-            title=f"Shout Setup ({i}/{total}): {perm['name']}",
-            message=f"{perm['why']}\n\n{perm['how']}",
-            ok="Open Settings",
-            cancel="Skip",
-        )
-        if response == 1:  # OK
-            open_settings(perm["name"])
-            # Wait for user to grant permission before moving on
-            rumps.alert(
-                title=f"{perm['name']}",
-                message=(
-                    f"Once you've enabled {perm['name']} access, click OK to continue.\n\n"
-                    "Note: you may need to restart Shout for changes to take effect."
-                ),
-                ok="OK",
-            )
-
-
 if __name__ == "__main__":
-    _check_permissions_gui()
     ShoutApp().run()
