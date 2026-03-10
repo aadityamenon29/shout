@@ -98,24 +98,32 @@ class ShoutApp(rumps.App):
 
 
 def _check_permissions_gui():
-    """Check permissions on startup and show a dialog if anything is missing."""
-    from permissions import check_all
+    """Walk the user through each missing permission one at a time."""
+    from permissions import get_missing_permissions, open_settings
 
-    issues = check_all()
-    if not issues:
+    missing = get_missing_permissions()
+    if not missing:
         return
 
-    names = ", ".join(i["name"] for i in issues)
-    message = "\n\n".join(i["message"] for i in issues)
-    response = rumps.alert(
-        title=f"Shout needs permissions: {names}",
-        message=message + "\n\nClick OK to open System Settings.",
-        ok="Open Settings",
-        cancel="Skip",
-    )
-    if response == 1:  # OK
-        for issue in issues:
-            issue["open_settings"]()
+    total = len(missing)
+    for i, perm in enumerate(missing, 1):
+        response = rumps.alert(
+            title=f"Shout Setup ({i}/{total}): {perm['name']}",
+            message=f"{perm['why']}\n\n{perm['how']}",
+            ok="Open Settings",
+            cancel="Skip",
+        )
+        if response == 1:  # OK
+            open_settings(perm["name"])
+            # Wait for user to grant permission before moving on
+            rumps.alert(
+                title=f"{perm['name']}",
+                message=(
+                    f"Once you've enabled {perm['name']} access, click OK to continue.\n\n"
+                    "Note: you may need to restart Shout for changes to take effect."
+                ),
+                ok="OK",
+            )
 
 
 if __name__ == "__main__":
